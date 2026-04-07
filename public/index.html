@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Les Braises Festival 2026 — Billetterie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    :root {
+      --cream: #F5ECD7;
+      --orange: #E8622A;
+      --jaune: #F0B429;
+      --vert: #2A6B4A;
+      --brun: #2C1A0E;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── VIDÉO ARRIÈRE-PLAN ── */
+    body { margin: 0; min-height: 100vh; font-family: 'Libre Baskerville', Georgia, serif; color: var(--cream); }
+    .video-bg {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: -2;
+      overflow: hidden;
+    }
+    .video-bg video {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      filter: blur(6px) brightness(0.55);
+      transform: scale(1.05);
+    }
+    .video-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: -1;
+      background: rgba(20, 10, 4, 0.45);
+    }
+
+    /* ── CONTENU PAR-DESSUS ── */
+    .contenu {
+      position: relative;
+      z-index: 1;
+      padding: 2.5rem 1rem 5rem;
+      min-height: 100vh;
+    }
+
+    .header { text-align: center; margin-bottom: 2.5rem; }
+    .logo-ring {
+      width: 210px; height: 210px; border-radius: 50%;
+      background: #000 url(logo.png) center center no-repeat;
+      background-size: 171%;
+      margin: 0 auto 1.2rem;
+      border: 4px solid var(--orange);
+    }
+    .logo-ring img { display: none; }
+    .festival-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.6rem; font-weight: 900; color: var(--jaune);
+      letter-spacing: 0.05em; text-transform: uppercase; line-height: 1;
+      text-shadow: 0 2px 16px rgba(0,0,0,0.6);
+    }
+    .festival-info {
+      font-size: 0.78rem; color: rgba(245,236,215,0.75);
+      letter-spacing: 0.2em; text-transform: uppercase;
+      margin-top: 0.5rem; line-height: 2;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+    }
+
+    /* ── CARTE FORMULAIRE : opaque et solide ── */
+    .card {
+      background: #1e1008;
+      border: 1px solid rgba(232,98,42,0.4);
+      border-radius: 18px; padding: 2rem;
+      max-width: 460px; margin: 0 auto;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.7);
+    }
+
+    .step { display: none; }
+    .step.active { display: block; }
+    .step-label {
+      font-size: 0.67rem; letter-spacing: 0.28em; text-transform: uppercase;
+      color: var(--orange); margin-bottom: 1.5rem;
+      display: flex; align-items: center; gap: 0.6rem;
+    }
+    .step-label::after { content: ''; flex: 1; height: 1px; background: rgba(232,98,42,0.22); }
+    .form-group { margin-bottom: 1.15rem; }
+    label {
+      display: block; font-size: 0.73rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: rgba(245,236,215,0.58);
+      margin-bottom: 0.45rem;
+    }
+    input[type="text"], input[type="email"], select {
+      width: 100%; background: rgba(44,26,14,0.9);
+      border: 1px solid rgba(232,98,42,0.32); border-radius: 9px;
+      padding: 0.75rem 1rem;
+      font-family: 'Libre Baskerville', Georgia, serif;
+      font-size: 0.93rem; color: var(--cream); outline: none;
+      transition: border-color 0.2s;
+      appearance: none; -webkit-appearance: none;
+    }
+    input[type="text"]:focus, input[type="email"]:focus, select:focus { border-color: var(--orange); }
+    input[type="text"]::placeholder, input[type="email"]::placeholder { color: rgba(245,236,215,0.22); }
+    .select-wrap { position: relative; }
+    .select-arrow {
+      position: absolute; right: 1rem; top: 50%;
+      transform: translateY(-50%);
+      color: var(--orange); pointer-events: none; font-size: 11px;
+    }
+    select option { background: #2C1A0E; color: #F5ECD7; }
+    .name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+
+    /* ── DATE D'ARRIVÉE ── */
+    .date-choix { display: flex; gap: 0.8rem; margin-top: 0.45rem; }
+    .date-option { flex: 1; position: relative; }
+    .date-option input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .date-option label {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 0.15rem;
+      background: rgba(44,26,14,0.9);
+      border: 1px solid rgba(232,98,42,0.32);
+      border-radius: 9px; padding: 0.9rem 0.5rem;
+      cursor: pointer; transition: all 0.2s;
+      text-transform: none; letter-spacing: 0;
+      color: rgba(245,236,215,0.7); margin-bottom: 0;
+    }
+    .date-option label .date-jour {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem; font-weight: 900;
+      color: var(--jaune); line-height: 1;
+    }
+    .date-option label .date-mois {
+      font-size: 0.67rem; letter-spacing: 0.15em;
+      text-transform: uppercase; color: rgba(245,236,215,0.4);
+    }
+    .date-option label .date-soirees {
+      font-size: 0.7rem; color: var(--orange);
+      font-style: italic; margin-top: 0.25rem;
+    }
+    .date-option input[type="radio"]:checked + label {
+      border-color: var(--orange);
+      background: rgba(232,98,42,0.2);
+      color: var(--cream);
+    }
+    .date-option input[type="radio"]:checked + label .date-mois { color: rgba(245,236,215,0.6); }
+
+    /* ── BADGE TARIF ── */
+    .tarif-badge {
+      background: rgba(232,98,42,0.12);
+      border: 1px solid rgba(232,98,42,0.35);
+      border-radius: 11px; padding: 1rem 1.2rem;
+      margin: 1.3rem 0; text-align: center; display: none;
+    }
+    .tarif-badge.visible { display: block; }
+    .tarif-amount {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.8rem; font-weight: 900; color: var(--jaune); line-height: 1;
+    }
+    .tarif-sous {
+      font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase;
+      color: rgba(245,236,215,0.45); margin-top: 0.25rem;
+    }
+    .tarif-invitant { font-size: 0.82rem; color: var(--orange); margin-top: 0.4rem; font-style: italic; }
+
+    /* ── RÉCAP ── */
+    .recap-block {
+      background: rgba(10,5,2,0.6); border-radius: 11px;
+      padding: 1.1rem 1.2rem; margin-bottom: 1.3rem;
+      font-size: 0.87rem; line-height: 2.1;
+    }
+    .recap-row { display: flex; justify-content: space-between; }
+    .recap-key { color: rgba(245,236,215,0.45); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    .recap-val { font-weight: 700; }
+    .recap-divider { height: 1px; background: rgba(232,98,42,0.2); margin: 0.6rem 0; }
+    .recap-total-row { display: flex; justify-content: space-between; align-items: center; }
+    .recap-total-label { color: rgba(245,236,215,0.45); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; }
+    .recap-total-amount { font-family: 'Playfair Display', serif; font-size: 1.75rem; font-weight: 900; color: var(--jaune); }
+
+    #card-element {
+      background: rgba(44,26,14,0.9); border: 1px solid rgba(232,98,42,0.32);
+      border-radius: 9px; padding: 0.85rem 1rem; margin-bottom: 1rem;
+    }
+    .btn {
+      width: 100%; background: var(--orange); color: var(--cream);
+      border: none; border-radius: 11px; padding: 1rem;
+      font-family: 'Playfair Display', serif; font-size: 1.05rem;
+      font-weight: 700; letter-spacing: 0.04em; cursor: pointer;
+      transition: background 0.2s, transform 0.1s; margin-top: 0.4rem;
+    }
+    .btn:hover { background: #cf5523; }
+    .btn:active { transform: scale(0.985); }
+    .btn:disabled { background: rgba(232,98,42,0.35); cursor: not-allowed; transform: none; }
+    .btn-back {
+      width: 100%; background: transparent; color: rgba(245,236,215,0.45);
+      border: 1px solid rgba(245,236,215,0.13); border-radius: 11px; padding: 0.7rem;
+      font-family: 'Libre Baskerville', serif; font-size: 0.8rem;
+      cursor: pointer; margin-top: 0.6rem; transition: all 0.2s;
+    }
+    .btn-back:hover { border-color: rgba(245,236,215,0.3); color: rgba(245,236,215,0.75); }
+    .error-box {
+      background: rgba(200,50,50,0.13); border: 1px solid rgba(200,50,50,0.32);
+      border-radius: 9px; padding: 0.75rem 1rem;
+      font-size: 0.82rem; color: #f09595; margin-top: 0.9rem; display: none;
+    }
+    .spinner {
+      display: inline-block; width: 15px; height: 15px;
+      border: 2px solid rgba(245,236,215,0.3); border-top-color: var(--cream);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .music-btn {
+      position: fixed; bottom: 1.2rem; right: 1.2rem;
+      z-index: 100;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(30,16,8,0.85);
+      border: 1px solid rgba(232,98,42,0.5);
+      color: var(--cream); font-size: 18px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .music-btn:hover { background: rgba(232,98,42,0.3); border-color: var(--orange); }
+    .tshirt-choix { display: flex; flex-direction: row; gap: 0.8rem; margin-top: 0.45rem; }
+    .tshirt-option { flex: 1; position: relative; }
+    .tshirt-option input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .tshirt-option label {
+      display: flex; flex-direction: column; align-items: center; gap: 0.6rem;
+      background: rgba(44,26,14,0.9);
+      border: 1px solid rgba(232,98,42,0.32);
+      border-radius: 9px; padding: 0.8rem 0.6rem 0.7rem;
+      cursor: pointer; transition: all 0.2s;
+      font-size: 0.78rem; color: rgba(245,236,215,0.75);
+      text-transform: none; letter-spacing: 0; margin-bottom: 0;
+      text-align: center; line-height: 1.3;
+    }
+    .tshirt-img-wrap {
+      position: relative; width: 80px; height: 80px;
+    }
+    .tshirt-img-wrap img {
+      width: 100%; height: 100%; object-fit: contain; border-radius: 6px;
+    }
+    .tshirt-croix {
+      display: none;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .tshirt-croix::before, .tshirt-croix::after {
+      content: ""; position: absolute;
+      background: #e8222a; border-radius: 3px;
+      top: 50%; left: 0; width: 100%; height: 5px;
+      transform-origin: center;
+    }
+    .tshirt-croix::before { transform: translateY(-50%) rotate(45deg); }
+    .tshirt-croix::after { transform: translateY(-50%) rotate(-45deg); }
+    .tshirt-option.non .tshirt-croix { display: block; }
+    .tshirt-option input[type="radio"]:checked + label {
+      border-color: var(--orange); background: rgba(232,98,42,0.18); color: var(--cream);
+    }
+    .taille-wrap { display: none; margin-top: 0.6rem; }
+    .taille-wrap.visible { display: block; }
+    .success-wrap { text-align: center; padding: 0.5rem 0 1rem; }
+    .success-circle {
+      width: 68px; height: 68px; border-radius: 50%;
+      background: rgba(42,107,74,0.25); border: 2px solid #2A6B4A;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.3rem; font-size: 2rem;
+    }
+    .success-title { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--jaune); margin-bottom: 0.6rem; }
+    .success-text { font-size: 0.87rem; color: rgba(245,236,215,0.6); line-height: 1.9; }
+    .footer {
+      text-align: center; margin-top: 2rem;
+      font-size: 0.67rem; color: rgba(245,236,215,0.35);
+      letter-spacing: 0.08em;
+    }
+    @media (max-width: 400px) {
+      .name-row { grid-template-columns: 1fr; }
+      .festival-title { font-size: 1.9rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MUSIQUE ARRIÈRE-PLAN -->
+  <audio id="bg-music" loop preload="auto">
+    <source src="musique.mp3" type="audio/mpeg" />
+  </audio>
+
+  <!-- VIDÉO ARRIÈRE-PLAN -->
+  <div class="video-bg">
+    <video autoplay muted loop playsinline>
+      <!--
+        Place ton fichier vidéo dans le dossier public/ et indique son nom ci-dessous.
+        Formats recommandés : .mp4 (compatible tous navigateurs) ou .webm
+        Exemple : <source src="festival.mp4" type="video/mp4" />
+      -->
+      <source src="video.mp4" type="video/mp4" />
+    </video>
+  </div>
+  <div class="video-overlay"></div>
+
+  <!-- CONTENU -->
+  <div class="contenu">
+  <div class="header">
+    <div class="logo-ring">
+      <img src="logo.png" alt="Les Braises Festival" />
+    </div>
+    <div class="festival-title">Les Braises</div>
+    <div class="festival-info">
+      11 – 13 septembre 2026<br>Les Aubrais · Machecoul
+    </div>
+  </div>
+
+  <div class="card">
+
+    <!-- ÉTAPE 1 -->
+    <div class="step active" id="step1">
+      <div class="step-label">Étape 1 — Vos informations</div>
+      <div class="name-row">
+        <div class="form-group">
+          <label for="prenom">Prénom</label>
+          <input type="text" id="prenom" placeholder="Marie" oninput="checkStep1()" />
+        </div>
+        <div class="form-group">
+          <label for="nom">Nom</label>
+          <input type="text" id="nom" placeholder="Dupont" oninput="checkStep1()" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="marie@exemple.fr" oninput="checkStep1()" />
+      </div>
+      <div class="form-group">
+        <label for="invitant">Invité(e) par</label>
+        <div class="select-wrap">
+          <select id="invitant" onchange="checkStep1()">
+            <option value="">— Choisissez votre invitant —</option>
+            <option value="Camille">Camille</option>
+            <option value="Jean">Jean</option>
+            <option value="Théophile">Théophile</option>
+            <option value="Isaure">Isaure</option>
+            <option value="Andéol">Andéol</option>
+            <option value="Ombeline">Ombeline</option>
+            <option value="Augustin">Augustin</option>
+            <option value="Alexis">Alexis</option>
+          </select>
+          <span class="select-arrow">▼</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>T-shirt</label>
+        <div class="tshirt-choix">
+          <div class="tshirt-option">
+            <input type="radio" name="tshirt" id="tshirt-oui" value="oui" onchange="toggleTaille()" />
+            <label for="tshirt-oui">
+              <div class="tshirt-img-wrap">
+                <img src="tshirt.jpeg" alt="T-shirt" />
+              </div>
+              J'achète un t-shirt<br><strong style="color:var(--jaune)">+30 €</strong>
+            </label>
+          </div>
+          <div class="tshirt-option non">
+            <input type="radio" name="tshirt" id="tshirt-non" value="non" onchange="toggleTaille()" />
+            <label for="tshirt-non">
+              <div class="tshirt-img-wrap">
+                <img src="tshirt.jpeg" alt="Pas de t-shirt" />
+                <div class="tshirt-croix"></div>
+              </div>
+              Je n'achète pas<br>de t-shirt
+            </label>
+          </div>
+        </div>
+        <div class="taille-wrap" id="taille-wrap">
+          <div class="select-wrap" style="margin-top:0.5rem">
+            <select id="taille-tshirt" onchange="checkStep1()">
+              <option value="">— Taille du t-shirt —</option>
+              <option value="XS">XS</option>
+              <option value="S">S</option>
+              <option value="M">M</option>
+              <option value="L">L</option>
+              <option value="XL">XL</option>
+            </select>
+            <span class="select-arrow">▼</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Date d'arrivée</label>
+        <div class="date-choix">
+          <div class="date-option">
+            <input type="radio" name="arrivee" id="arrivee11" value="11" onchange="checkStep1()" />
+            <label for="arrivee11">
+              <span class="date-jour">11</span>
+              <span class="date-mois">Septembre</span>
+              <span class="date-soirees">2 soirées</span>
+            </label>
+          </div>
+          <div class="date-option">
+            <input type="radio" name="arrivee" id="arrivee12" value="12" onchange="checkStep1()" />
+            <label for="arrivee12">
+              <span class="date-jour">12</span>
+              <span class="date-mois">Septembre</span>
+              <span class="date-soirees">1 soirée</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="tarif-badge" id="tarif-badge">
+        <div class="tarif-amount" id="tarif-amount"></div>
+        <div class="tarif-sous" id="tarif-sous">tarif · 1 billet</div>
+        <div class="tarif-invitant" id="tarif-invitant"></div>
+      </div>
+      <button class="btn" id="btn-step1" disabled onclick="goStep2()">Continuer →</button>
+    </div>
+
+    <!-- ÉTAPE 2 -->
+    <div class="step" id="step2">
+      <div class="step-label">Étape 2 — Paiement</div>
+      <div class="recap-block">
+        <div class="recap-row">
+          <span class="recap-key">Nom</span>
+          <span class="recap-val" id="recap-nom"></span>
+        </div>
+        <div class="recap-row">
+          <span class="recap-key">Email</span>
+          <span class="recap-val" id="recap-email" style="font-size:0.82rem"></span>
+        </div>
+        <div class="recap-row">
+          <span class="recap-key">Invité(e) par</span>
+          <span class="recap-val" id="recap-inv"></span>
+        </div>
+        <div class="recap-row">
+          <span class="recap-key">Arrivée</span>
+          <span class="recap-val" id="recap-arrivee"></span>
+        </div>
+        <div class="recap-row">
+          <span class="recap-key">Durée</span>
+          <span class="recap-val" id="recap-soirees"></span>
+        </div>
+        <div class="recap-row" id="recap-tshirt-row">
+          <span class="recap-key">T-shirt</span>
+          <span class="recap-val" id="recap-tshirt"></span>
+        </div>
+        <div class="recap-divider"></div>
+        <div class="recap-total-row">
+          <span class="recap-total-label">Total dû</span>
+          <span class="recap-total-amount" id="recap-total"></span>
+        </div>
+      </div>
+      <label>Carte bancaire</label>
+      <div id="card-element"></div>
+      <div class="error-box" id="error-box"></div>
+      <button class="btn" id="btn-payer" onclick="payer()">
+        Payer <span id="btn-montant"></span>
+      </button>
+      <button class="btn-back" onclick="goBack()">← Modifier mes informations</button>
+    </div>
+
+    <!-- ÉTAPE 3 : SUCCÈS -->
+    <div class="step" id="step3">
+      <div class="success-wrap">
+        <div class="success-circle">✓</div>
+        <div class="success-title">Billet confirmé !</div>
+        <p class="success-text" id="success-text"></p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    Paiement sécurisé · SSL · 1 billet par personne · Propulsé par Stripe
+  </div>
+  </div><!-- fin .contenu -->
+
+  <!-- BOUTON MUSIQUE -->
+  <button class="music-btn" id="music-btn" title="Couper/activer la musique">♪</button>
+
+  <script>
+    // ── MUSIQUE ──
+    const music = document.getElementById('bg-music');
+    const musicBtn = document.getElementById('music-btn');
+    let musicStarted = false;
+
+    // Démarre au premier clic sur la page (contournement politique navigateur)
+    function startMusic() {
+      if (!musicStarted) {
+        music.volume = 0.4;
+        music.play().then(() => { musicStarted = true; }).catch(() => {});
+      }
+    }
+    document.addEventListener('click', startMusic, { once: true });
+
+    // Bouton mute/unmute
+    musicBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!musicStarted) { startMusic(); return; }
+      if (music.paused) {
+        music.play();
+        musicBtn.textContent = '♪';
+      } else {
+        music.pause();
+        musicBtn.textContent = '♪̶';
+      }
+    });
+
+    const STRIPE_PK = 'VOTRE_CLE_PUBLIQUE_ICI'; // ← remplace ici
+    let stripe, elements, cardElement;
+    let tarifData = null;
+
+    function getTarif(inv) {
+      if (inv === 'Camille') return { prix: 20, label: 'Tarif amis de Camille' };
+      if (inv === 'Jean' || inv === 'Théophile') return { prix: 35, label: 'Tarif ' + inv };
+      if (inv) return { prix: 45, label: 'Tarif général' };
+      return null;
+    }
+
+    function getArrivee() {
+      const checked = document.querySelector('input[name="arrivee"]:checked');
+      return checked ? checked.value : null;
+    }
+
+    function toggleTaille() {
+      const tshirt = document.querySelector('input[name="tshirt"]:checked');
+      const wrap = document.getElementById('taille-wrap');
+      if (tshirt && tshirt.value === 'oui') {
+        wrap.classList.add('visible');
+      } else {
+        wrap.classList.remove('visible');
+        document.getElementById('taille-tshirt').value = '';
+      }
+      checkStep1();
+    }
+
+    function checkStep1() {
+      const prenom = document.getElementById('prenom').value.trim();
+      const nom = document.getElementById('nom').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const inv = document.getElementById('invitant').value;
+      const arrivee = getArrivee();
+      const badge = document.getElementById('tarif-badge');
+
+      if (inv) {
+        const t = getTarif(inv);
+        tarifData = t;
+        const tshirt = document.querySelector('input[name="tshirt"]:checked');
+        const tshirtVal = tshirt ? tshirt.value : null;
+        const total = t.prix + (tshirtVal === 'oui' ? 30 : 0);
+        tarifData = { ...t, total: total };
+        document.getElementById('tarif-amount').textContent = total + ' €';
+        document.getElementById('tarif-invitant').textContent = t.label;
+        const soireesLabel = arrivee === '12' ? '1 soirée' : arrivee === '11' ? '2 soirées' : '';
+        const tshirtLabel = tshirtVal === 'oui' ? ' · t-shirt inclus' : '';
+        document.getElementById('tarif-sous').textContent = (soireesLabel ? 'tarif · 1 billet · ' + soireesLabel : 'tarif · 1 billet') + tshirtLabel;
+        badge.classList.add('visible');
+      } else {
+        badge.classList.remove('visible');
+        tarifData = null;
+      }
+
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      const tshirt = document.querySelector('input[name="tshirt"]:checked');
+      const tshirtVal = tshirt ? tshirt.value : null;
+      const taille = document.getElementById('taille-tshirt').value;
+      const tshirtOk = tshirtVal === 'non' || (tshirtVal === 'oui' && taille);
+      document.getElementById('btn-step1').disabled = !(prenom && nom && emailOk && inv && arrivee && tshirtOk);
+    }
+
+    function goStep2() {
+      const prenom = document.getElementById('prenom').value.trim();
+      const nom = document.getElementById('nom').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const inv = document.getElementById('invitant').value;
+      const arrivee = getArrivee();
+      const soirees = arrivee === '12' ? '1 soirée' : '2 soirées';
+
+      document.getElementById('recap-nom').textContent = prenom + ' ' + nom;
+      document.getElementById('recap-email').textContent = email;
+      document.getElementById('recap-inv').textContent = inv;
+      document.getElementById('recap-arrivee').textContent = arrivee + ' septembre 2026';
+      document.getElementById('recap-soirees').textContent = soirees;
+      const tshirtEl3 = document.querySelector('input[name="tshirt"]:checked');
+      const tshirtVal3 = tshirtEl3 ? tshirtEl3.value : 'non';
+      const taille3 = document.getElementById('taille-tshirt').value;
+      if (tshirtVal3 === 'oui') {
+        document.getElementById('recap-tshirt').textContent = 'Oui — taille ' + taille3 + ' (+30 €)';
+        document.getElementById('recap-tshirt-row').style.display = 'flex';
+      } else {
+        document.getElementById('recap-tshirt-row').style.display = 'none';
+      }
+      const tshirtEl = document.querySelector('input[name="tshirt"]:checked');
+      const tshirtVal2 = tshirtEl ? tshirtEl.value : 'non';
+      const taille2 = document.getElementById('taille-tshirt').value;
+      const totalFinal = tarifData.total || tarifData.prix;
+      document.getElementById('recap-total').textContent = totalFinal + ' €';
+      document.getElementById('btn-montant').textContent = totalFinal + ' €';
+
+      document.getElementById('step1').classList.remove('active');
+      document.getElementById('step2').classList.add('active');
+
+      if (!stripe) {
+        stripe = Stripe(STRIPE_PK);
+        elements = stripe.elements({ locale: 'fr' });
+        cardElement = elements.create('card', {
+          style: {
+            base: {
+              color: '#F5ECD7',
+              fontFamily: '"Libre Baskerville", Georgia, serif',
+              fontSize: '15px',
+              '::placeholder': { color: 'rgba(245,236,215,0.28)' },
+              iconColor: '#E8622A',
+            },
+            invalid: { color: '#f09595' }
+          }
+        });
+        cardElement.mount('#card-element');
+      }
+    }
+
+    function goBack() {
+      document.getElementById('step2').classList.remove('active');
+      document.getElementById('step1').classList.add('active');
+    }
+
+    async function payer() {
+      const btn = document.getElementById('btn-payer');
+      const errBox = document.getElementById('error-box');
+      errBox.style.display = 'none';
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Traitement en cours…';
+
+      const prenom = document.getElementById('prenom').value.trim();
+      const nom = document.getElementById('nom').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const inv = document.getElementById('invitant').value;
+      const arrivee = getArrivee();
+      const soirees = arrivee === '12' ? '1 soirée' : '2 soirées';
+      const tshirtPay = document.querySelector('input[name="tshirt"]:checked');
+      const tshirtValPay = tshirtPay ? tshirtPay.value : 'non';
+      const taillePay = document.getElementById('taille-tshirt').value;
+
+      try {
+        const res = await fetch('/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            invitant: inv,
+            nom: prenom + ' ' + nom,
+            email: email,
+            arrivee: arrivee,
+            soirees: soirees,
+            tshirt: tshirtValPay,
+            taille_tshirt: tshirtValPay === 'oui' ? taillePay : 'aucune'
+          })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        const { error } = await stripe.confirmCardPayment(data.clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: { name: prenom + ' ' + nom, email: email }
+          }
+        });
+        if (error) throw error;
+
+        // Enregistrement de l acheteur cote serveur
+        await fetch('/confirm-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            paymentIntentId: data.paymentIntentId,
+            nom: nom,
+            prenom: prenom,
+            email: email,
+            invitant: inv,
+            arrivee: arrivee,
+            soirees: soirees
+          })
+        });
+
+        document.getElementById('step2').classList.remove('active');
+        document.getElementById('step3').classList.add('active');
+        document.getElementById('success-text').innerHTML =
+          `Merci <strong>${prenom}</strong> !<br><br>
+           Ton billet pour <strong>Les Braises 2026</strong><br>
+           Arrivée le <strong>${arrivee} septembre</strong> · <strong>${soirees}</strong><br>
+           Les Aubrais, Machecoul<br><br>
+           est confirmé. Un email de confirmation<br>
+           t'a été envoyé à <strong>${email}</strong>.`;
+
+      } catch (err) {
+        errBox.textContent = err.message || 'Une erreur est survenue. Réessaie.';
+        errBox.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = 'Payer ' + tarifData.prix + ' €';
+      }
+    }
+  </script>
+</body>
+</html>
