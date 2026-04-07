@@ -475,7 +475,7 @@
   </div><!-- fin .contenu -->
 
   <!-- BOUTON MUSIQUE -->
-  <button class="music-btn" id="music-btn" title="Couper/activer la musique">♪</button>
+  <button class="music-btn" id="music-btn" title="Couper/activer la musique">🔊</button>
 
   <script>
     // ── MUSIQUE ──
@@ -483,36 +483,43 @@
     const musicBtn = document.getElementById('music-btn');
     let musicStarted = false;
 
-    // Démarre au premier clic sur la page (contournement politique navigateur)
+    // Démarre au premier clic n'importe où sur la page
     function startMusic() {
       if (!musicStarted) {
         music.volume = 0.4;
-        music.play().then(() => { musicStarted = true; }).catch(() => {});
+        music.play().then(() => {
+          musicStarted = true;
+          musicBtn.innerHTML = '🔊';
+        }).catch(() => {});
       }
     }
     document.addEventListener('click', startMusic, { once: true });
 
-    // Bouton mute/unmute
+    // Bouton mute/unmute uniquement
     musicBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (!musicStarted) { startMusic(); return; }
-      if (music.paused) {
-        music.play();
-        musicBtn.textContent = '♪';
+      if (!musicStarted) {
+        startMusic();
+        return;
+      }
+      if (music.muted) {
+        music.muted = false;
+        musicBtn.innerHTML = '🔊';
       } else {
-        music.pause();
-        musicBtn.textContent = '♪̶';
+        music.muted = true;
+        musicBtn.innerHTML = '🔇';
       }
     });
 
-    const STRIPE_PK = 'pk_live_51TJJpMHiaNf9zKRzhB3HBSnLgTrLyNsEuPusN4dymP78ioEormwSLVpyrtt69HURrgQamX5SVJQ47pnoVjKYiLCX00YrqBr0UL'; // ← remplace ici
+    const STRIPE_PK = 'VOTRE_CLE_PUBLIQUE_ICI'; // ← remplace ici
     let stripe, elements, cardElement;
     let tarifData = null;
 
-    function getTarif(inv) {
-      if (inv === 'Camille') return { prix: 20, label: 'Tarif amis de Camille' };
-      if (inv === 'Jean' || inv === 'Théophile') return { prix: 35, label: 'Tarif ' + inv };
-      if (inv) return { prix: 45, label: 'Tarif général' };
+    function getTarif(inv, arrivee) {
+      const uneNuit = arrivee === '12';
+      if (inv === 'Camille') return { prix: uneNuit ? 19 : 20, label: 'Tarif amis de Camille' };
+      if (inv === 'Jean' || inv === 'Théophile') return { prix: uneNuit ? 34 : 35, label: 'Tarif ' + inv };
+      if (inv) return { prix: uneNuit ? 44 : 45, label: 'Tarif général' };
       return null;
     }
 
@@ -542,7 +549,7 @@
       const badge = document.getElementById('tarif-badge');
 
       if (inv) {
-        const t = getTarif(inv);
+        const t = getTarif(inv, arrivee);
         tarifData = t;
         const tshirt = document.querySelector('input[name="tshirt"]:checked');
         const tshirtVal = tshirt ? tshirt.value : null;
@@ -592,7 +599,10 @@
       const tshirtEl = document.querySelector('input[name="tshirt"]:checked');
       const tshirtVal2 = tshirtEl ? tshirtEl.value : 'non';
       const taille2 = document.getElementById('taille-tshirt').value;
-      const totalFinal = tarifData.total || tarifData.prix;
+      const tarifFinal = getTarif(inv, arrivee);
+      const tshirtAdd = (document.querySelector('input[name="tshirt"]:checked') || {}).value === 'oui' ? 30 : 0;
+      const totalFinal = tarifFinal.prix + tshirtAdd;
+      tarifData = { ...tarifFinal, total: totalFinal };
       document.getElementById('recap-total').textContent = totalFinal + ' €';
       document.getElementById('btn-montant').textContent = totalFinal + ' €';
 

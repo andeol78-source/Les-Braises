@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const path = require('path');
@@ -31,21 +32,24 @@ function sauvegarderAcheteur(acheteur) {
 }
 
 // Tarifs en centimes
-function getTarifCentimes(invitant) {
-  if (invitant === 'Camille') return 2000;
-  if (invitant === 'Jean' || invitant === 'Théophile') return 3500;
-  return 4500;
+function getTarifCentimes(invitant, tshirt, arrivee) {
+  const uneNuit = arrivee === '12';
+  let base = uneNuit ? 4400 : 4500;
+  if (invitant === 'Camille') base = uneNuit ? 1900 : 2000;
+  else if (invitant === 'Jean' || invitant === 'Théophile') base = uneNuit ? 3400 : 3500;
+  if (tshirt === 'oui') base += 3000;
+  return base;
 }
 
 // ── ROUTE : Création du PaymentIntent ──
 app.post('/create-payment-intent', async (req, res) => {
-  const { invitant, nom, email, arrivee, soirees } = req.body;
+  const { invitant, nom, email, arrivee, soirees, tshirt, taille_tshirt } = req.body;
 
   if (!invitant || !nom || !email || !arrivee || !soirees) {
     return res.status(400).json({ error: 'Informations manquantes.' });
   }
 
-  const montant = getTarifCentimes(invitant);
+  const montant = getTarifCentimes(invitant, tshirt, arrivee);
 
   try {
     const paymentIntent = await stripe.paymentIntents.create({
@@ -98,6 +102,7 @@ app.post('/confirm-payment', async (req, res) => {
       soirees: soirees,
       invitant: invitant,
       arrivee: arrivee + ' septembre 2026',
+      tshirt: tshirt === 'oui' ? 'Oui — taille ' + taille_tshirt : 'Non',
       montant: montantEuros + ' €',
       date_achat: new Date().toLocaleString('fr-FR'),
       payment_id: paymentIntentId,
@@ -199,6 +204,13 @@ app.get('/admin', (req, res) => {
     .badge-1 { background: rgba(240,180,41,0.15); color: var(--jaune); }
     .badge-2 { background: rgba(232,98,42,0.15); color: var(--orange); }
     .empty { text-align: center; padding: 3rem; color: rgba(245,236,215,0.35); font-style: italic; }
+    .btn-suppr {
+      background: none; border: none; cursor: pointer;
+      color: rgba(245,236,215,0.25); font-size: 16px;
+      padding: 4px 8px; border-radius: 5px;
+      transition: all 0.2s; line-height: 1;
+    }
+    .btn-suppr:hover { color: #f09595; background: rgba(200,50,50,0.15); }
   </style>
 </head>
 <body>
@@ -240,10 +252,12 @@ app.get('/admin', (req, res) => {
             <th>Prénom</th>
             <th>Email</th>
             <th>Soirées</th>
+            <th>T-shirt</th>
             <th>Invité(e) par</th>
             <th>Arrivée</th>
             <th>Montant</th>
             <th>Date d'achat</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="table-body"></tbody>
@@ -270,6 +284,21 @@ app.get('/admin', (req, res) => {
         .catch(err => {
           document.getElementById('login-error').textContent = err.message;
         });
+    }
+
+    async function supprimerAcheteur(index) {
+      if (!confirm('Supprimer cet acheteur de la liste ?')) return;
+      const res = await fetch('/api/acheteurs/' + index + '?pwd=' + encodeURIComponent(mdp), {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        // Recharger les données
+        fetch('/api/acheteurs?pwd=' + encodeURIComponent(mdp))
+          .then(r => r.json())
+          .then(data => afficherTableau(data));
+      } else {
+        alert('Erreur lors de la suppression.');
+      }
     }
 
     function afficherTableau(acheteurs) {
@@ -313,6 +342,21 @@ app.get('/api/acheteurs', (req, res) => {
   res.json(lireAcheteurs());
 });
 
+// ── ROUTE : Suppression d'un acheteur (protégée) ──
+app.delete('/api/acheteurs/:index', (req, res) => {
+  if (req.query.pwd !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Non autorisé.' });
+  }
+  const index = parseInt(req.params.index);
+  const liste = lireAcheteurs();
+  if (index < 0 || index >= liste.length) {
+    return res.status(400).json({ error: 'Index invalide.' });
+  }
+  liste.splice(index, 1);
+  fs.writeFileSync(DATA_FILE, JSON.stringify(liste, null, 2));
+  res.json({ ok: true });
+});
+
 // ── ROUTE : Export CSV (protégée) ──
 app.get('/export-csv', (req, res) => {
   if (req.query.pwd !== ADMIN_PASSWORD) {
@@ -320,9 +364,9 @@ app.get('/export-csv', (req, res) => {
   }
 
   const acheteurs = lireAcheteurs();
-  const colonnes = ['Nom', 'Prénom', 'Email', 'Soirées', 'Invité par', 'Arrivée', 'Montant', "Date d'achat"];
+  const colonnes = ['Nom', 'Prénom', 'Email', 'Soirées', 'T-shirt', 'Invité par', 'Arrivée', 'Montant', "Date d'achat"];
   const lignes = acheteurs.map(a => [
-    a.nom, a.prenom, a.email, a.soirees, a.invitant, a.arrivee, a.montant, a.date_achat
+    a.nom, a.prenom, a.email, a.soirees, a.tshirt || 'Non', a.invitant, a.arrivee, a.montant, a.date_achat
   ]);
 
   const csvContent = [colonnes, ...lignes]
