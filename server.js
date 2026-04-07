@@ -81,7 +81,7 @@ app.post('/create-payment-intent', async (req, res) => {
 
 // ── ROUTE : Confirmation de paiement (appelée par le front après succès Stripe) ──
 app.post('/confirm-payment', async (req, res) => {
-  const { paymentIntentId, nom, prenom, email, invitant, arrivee, soirees } = req.body;
+  const { paymentIntentId, nom, prenom, email, invitant, arrivee, soirees, tshirt, taille_tshirt } = req.body;
 
   try {
     // Vérifie auprès de Stripe que le paiement est bien réussi
