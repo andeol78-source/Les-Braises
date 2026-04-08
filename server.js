@@ -251,9 +251,10 @@ app.get('/admin', (req, res) => {
             <th>Prénom</th>
             <th>Email</th>
             <th>Soirées</th>
-            <th>T-shirt</th>
             <th>Invité(e) par</th>
             <th>Arrivée</th>
+            <th>T-shirt</th>
+            <th>Taille</th>
             <th>Montant</th>
             <th>Date d'achat</th>
             <th></th>
@@ -306,7 +307,7 @@ app.get('/admin', (req, res) => {
       let recette = 0;
 
       if (total === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="empty">Aucun billet vendu pour le moment.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="empty">Aucun billet vendu pour le moment.</td></tr>';
       } else {
         tbody.innerHTML = acheteurs.map((a, i) => {
           const montantNum = parseFloat(a.montant);
@@ -363,10 +364,11 @@ app.get('/export-csv', (req, res) => {
   }
 
   const acheteurs = lireAcheteurs();
-  const colonnes = ['Nom', 'Prénom', 'Email', 'Soirées', 'T-shirt', 'Invité par', 'Arrivée', 'Montant', "Date d'achat"];
-  const lignes = acheteurs.map(a => [
-    a.nom, a.prenom, a.email, a.soirees, a.tshirt || 'Non', a.invitant, a.arrivee, a.montant, a.date_achat
-  ]);
+  const colonnes = ['Nom', 'Prénom', 'Email', 'Soirées', 'Invité par', 'Arrivée', 'T-shirt', 'Taille', 'Montant', "Date d'achat"];
+  const lignes = acheteurs.map(a => {
+    const tshirtOui = a.tshirt && a.tshirt.startsWith('Oui');
+    return [a.nom, a.prenom, a.email, a.soirees, a.invitant, a.arrivee, tshirtOui ? 'Oui' : 'Non', tshirtOui ? a.tshirt.replace('Oui — taille ', '') : '', a.montant, a.date_achat];
+  });
 
   const csvContent = [colonnes, ...lignes]
     .map(row => row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(';'))
