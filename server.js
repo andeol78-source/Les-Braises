@@ -262,8 +262,8 @@ app.get('/admin', (req, res) => {
             '<td style="color:rgba(245,236,215,0.4);font-size:0.72rem">' + (a.date_achat||'') + '</td>' +
             '</tr>';
         }).join('');
-        document.getElementById('stat-recette').textContent = recette.toFixed(0) + ' €';
       }
+      document.getElementById('stat-recette').textContent = recette.toFixed(0) + ' €';
       document.getElementById('stat-total').textContent = acheteurs.length;
     }
   </script>
