@@ -31,24 +31,23 @@ function sauvegarderAcheteur(acheteur) {
 }
 
 // Tarifs en centimes
-function getTarifCentimes(invitant, tshirt, arrivee) {
-  const uneNuit = arrivee === '12';
-  let base = uneNuit ? 4400 : 4500;
-  if (invitant === 'Camille') base = uneNuit ? 1900 : 2000;
-  else if (invitant === 'Jean' || invitant === 'Théophile') base = uneNuit ? 3400 : 3500;
-  if (tshirt === 'oui') base += 3000;
+function getTarifCentimes(invitant, tshirt) {
+  let base = 4900;
+  if (invitant === 'Camille') base = 2500;
+  else if (invitant === 'Jean' || invitant === 'Théophile') base = 3700;
+  if (tshirt === 'oui') base += 1500;
   return base;
 }
 
 // ── ROUTE : Création du PaymentIntent ──
 app.post('/create-payment-intent', async (req, res) => {
-  const { invitant, nom, email, arrivee, soirees, tshirt, taille_tshirt } = req.body;
+  const { invitant, nom, email, arrivee, tshirt, taille_tshirt } = req.body;
 
-  if (!invitant || !nom || !email || !arrivee || !soirees) {
+  if (!invitant || !nom || !email || !arrivee) {
     return res.status(400).json({ error: 'Informations manquantes.' });
   }
 
-  const montant = getTarifCentimes(invitant, tshirt, arrivee);
+  const montant = getTarifCentimes(invitant, tshirt);
 
   try {
     const paymentIntent = await stripe.paymentIntents.create({
@@ -59,7 +58,6 @@ app.post('/create-payment-intent', async (req, res) => {
         nom_acheteur: nom,
         invitant: invitant,
         arrivee: arrivee + ' septembre 2026',
-        soirees: soirees,
         festival: 'Les Braises 2026',
         lieu: 'Les Aubrais, Machecoul',
       },
@@ -81,7 +79,7 @@ app.post('/create-payment-intent', async (req, res) => {
 
 // ── ROUTE : Confirmation de paiement (appelée par le front après succès Stripe) ──
 app.post('/confirm-payment', async (req, res) => {
-  const { paymentIntentId, nom, prenom, email, invitant, arrivee, soirees, tshirt, taille_tshirt } = req.body;
+  const { paymentIntentId, nom, prenom, email, invitant, arrivee, tshirt, taille_tshirt } = req.body;
 
   try {
     // Vérifie auprès de Stripe que le paiement est bien réussi
@@ -98,7 +96,6 @@ app.post('/confirm-payment', async (req, res) => {
       nom: nom,
       prenom: prenom,
       email: email,
-      soirees: soirees,
       invitant: invitant,
       arrivee: arrivee + ' septembre 2026',
       tshirt: tshirt === 'oui' ? 'Oui — taille ' + taille_tshirt : 'Non',
@@ -153,7 +150,6 @@ app.get('/admin', (req, res) => {
     col.c-nom    { width: 130px; }
     col.c-prenom { width: 100px; }
     col.c-email  { width: 175px; }
-    col.c-soirees{ width: 75px; }
     col.c-invitant{ width: 90px; }
     col.c-arrivee{ width: 115px; }
     col.c-tshirt { width: 65px; }
@@ -165,9 +161,6 @@ app.get('/admin', (req, res) => {
     th { padding: 0.75rem 0.5rem; text-align: left; font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--orange); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     td { padding: 0.65rem 0.5rem; border-bottom: 1px solid rgba(245,236,215,0.07); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
     tr:hover td { background: rgba(245,236,215,0.03); }
-    .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 5px; font-size: 0.7rem; }
-    .badge-1 { background: rgba(240,180,41,0.15); color: var(--jaune); }
-    .badge-2 { background: rgba(232,98,42,0.15); color: var(--orange); }
     .empty { text-align: center; padding: 3rem; color: rgba(245,236,215,0.35); font-style: italic; }
     .btn-suppr { background: none; border: none; cursor: pointer; color: rgba(245,236,215,0.3); font-size: 15px; padding: 3px 5px; border-radius: 4px; transition: all 0.2s; }
     .btn-suppr:hover { color: #f09595; background: rgba(200,50,50,0.2); }
@@ -199,13 +192,13 @@ app.get('/admin', (req, res) => {
       <table>
         <colgroup>
           <col class="c-suppr"/><col class="c-num"/><col class="c-nom"/><col class="c-prenom"/>
-          <col class="c-email"/><col class="c-soirees"/><col class="c-invitant"/><col class="c-arrivee"/>
+          <col class="c-email"/><col class="c-invitant"/><col class="c-arrivee"/>
           <col class="c-tshirt"/><col class="c-taille"/><col class="c-montant"/><col class="c-date"/>
         </colgroup>
         <thead>
           <tr>
             <th></th><th>#</th><th>Nom</th><th>Prénom</th><th>Email</th>
-            <th>Soirées</th><th>Invité par</th><th>Arrivée</th>
+            <th>Invité par</th><th>Arrivée</th>
             <th>T-shirt</th><th>Taille</th><th>Montant</th><th>Date d'achat</th>
           </tr>
         </thead>
@@ -238,12 +231,11 @@ app.get('/admin', (req, res) => {
       const tbody = document.getElementById('table-body');
       let recette = 0;
       if (acheteurs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="empty">Aucun billet vendu pour le moment.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="empty">Aucun billet vendu pour le moment.</td></tr>';
       } else {
         tbody.innerHTML = acheteurs.map((a, i) => {
           const montantNum = parseFloat(a.montant);
           if (!isNaN(montantNum)) recette += montantNum;
-          const badgeClass = (a.soirees || '') === '1 soirée' ? 'badge-1' : 'badge-2';
           const tshirtPris = a.tshirt && a.tshirt.startsWith('Oui');
           const tshirtCell = tshirtPris ? 'Oui' : 'Non';
           const tailleCell = tshirtPris ? (a.tshirt || '').replace('Oui — taille ', '') : '';
@@ -253,7 +245,6 @@ app.get('/admin', (req, res) => {
             '<td><strong>' + (a.nom||'') + '</strong></td>' +
             '<td>' + (a.prenom||'') + '</td>' +
             '<td style="color:rgba(245,236,215,0.6);font-size:0.75rem">' + (a.email||'') + '</td>' +
-            '<td><span class="badge ' + badgeClass + '">' + (a.soirees||'') + '</span></td>' +
             '<td>' + (a.invitant||'') + '</td>' +
             '<td>' + (a.arrivee||'') + '</td>' +
             '<td>' + tshirtCell + '</td>' +
@@ -301,10 +292,10 @@ app.get('/export-csv', (req, res) => {
   }
 
   const acheteurs = lireAcheteurs();
-  const colonnes = ['Nom', 'Prénom', 'Email', 'Soirées', 'Invité par', 'Arrivée', 'T-shirt', 'Taille', 'Montant', "Date d'achat"];
+  const colonnes = ['Nom', 'Prénom', 'Email', 'Invité par', 'Arrivée', 'T-shirt', 'Taille', 'Montant', "Date d'achat"];
   const lignes = acheteurs.map(a => {
     const tshirtOui = a.tshirt && a.tshirt.startsWith('Oui');
-    return [a.nom, a.prenom, a.email, a.soirees, a.invitant, a.arrivee, tshirtOui ? 'Oui' : 'Non', tshirtOui ? a.tshirt.replace('Oui — taille ', '') : '', a.montant, a.date_achat];
+    return [a.nom, a.prenom, a.email, a.invitant, a.arrivee, tshirtOui ? 'Oui' : 'Non', tshirtOui ? a.tshirt.replace('Oui — taille ', '') : '', a.montant, a.date_achat];
   });
 
   const csvContent = [colonnes, ...lignes]

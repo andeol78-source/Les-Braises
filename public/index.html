@@ -136,10 +136,6 @@
       font-size: 0.67rem; letter-spacing: 0.15em;
       text-transform: uppercase; color: rgba(245,236,215,0.4);
     }
-    .date-option label .date-soirees {
-      font-size: 0.7rem; color: var(--orange);
-      font-style: italic; margin-top: 0.25rem;
-    }
     .date-option input[type="radio"]:checked + label {
       border-color: var(--orange);
       background: rgba(232,98,42,0.2);
@@ -259,6 +255,43 @@
     .tshirt-option input[type="radio"]:checked + label {
       border-color: var(--orange); background: rgba(232,98,42,0.18); color: var(--cream);
     }
+    .tshirt-zoom {
+      position: absolute; top: -6px; right: -6px; z-index: 3;
+      width: 22px; height: 22px; border-radius: 50%; padding: 0;
+      background: rgba(30,16,8,0.92); border: 1px solid rgba(232,98,42,0.6);
+      color: var(--cream); font-size: 11px; line-height: 1; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .tshirt-zoom:hover { background: rgba(232,98,42,0.4); border-color: var(--orange); }
+    .tshirt-modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10,5,2,0.82); z-index: 200;
+      align-items: center; justify-content: center; padding: 1.5rem;
+    }
+    .tshirt-modal-overlay.visible { display: flex; }
+    .tshirt-modal-box {
+      background: #1e1008; border: 1px solid rgba(232,98,42,0.4);
+      border-radius: 16px; padding: 1.5rem; max-width: 420px; width: 100%;
+      position: relative; box-shadow: 0 8px 48px rgba(0,0,0,0.7);
+    }
+    .tshirt-modal-title {
+      font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--jaune);
+    }
+    .tshirt-modal-close {
+      position: absolute; top: 0.7rem; right: 0.7rem;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(245,236,215,0.08); border: none; color: var(--cream);
+      cursor: pointer; font-size: 14px;
+    }
+    .tshirt-modal-close:hover { background: rgba(232,98,42,0.3); }
+    .tshirt-modal-images { display: flex; gap: 1rem; margin-top: 1rem; }
+    .tshirt-modal-img-col { flex: 1; text-align: center; }
+    .tshirt-modal-img-col img { width: 100%; border-radius: 10px; }
+    .tshirt-modal-img-col span {
+      display: block; margin-top: 0.5rem; font-size: 0.7rem; letter-spacing: 0.15em;
+      text-transform: uppercase; color: rgba(245,236,215,0.45);
+    }
     .taille-wrap { display: none; margin-top: 0.6rem; }
     .taille-wrap.visible { display: block; }
     .success-wrap { text-align: center; padding: 0.5rem 0 1rem; }
@@ -355,21 +388,22 @@
           <div class="tshirt-option">
             <input type="radio" name="tshirt" id="tshirt-oui" value="oui" onchange="toggleTaille()" />
             <label for="tshirt-oui">
-              <div class="tshirt-img-wrap">
-                <img src=<img src="tshirt-recto.png" alt="T-shirt recto" style="width:48%;border-radius:4px"/>
-<img src="tshirt-verso.png" alt="T-shirt verso" style="width:48%;border-radius:4px"/>
- alt="T-shirt" />
+              <div class="tshirt-img-wrap" style="display:flex;gap:4px;width:100%">
+                <img src="tshirt-recto.png" alt="T-shirt recto" style="width:48%;border-radius:4px"/>
+                <img src="tshirt-verso.png" alt="T-shirt verso" style="width:48%;border-radius:4px"/>
+                <button type="button" class="tshirt-zoom" onclick="ouvrirApercuTshirt(event)" title="Voir en grand">👁</button>
               </div>
-              J'achète un t-shirt<br><strong style="color:var(--jaune)">+30 €</strong>
+              J'achète un t-shirt<br><strong style="color:var(--jaune)">+15 €</strong>
             </label>
           </div>
           <div class="tshirt-option non">
             <input type="radio" name="tshirt" id="tshirt-non" value="non" onchange="toggleTaille()" />
             <label for="tshirt-non">
-              <div class="tshirt-img-wrap">
-                <img src=<img src="tshirt-recto.png" alt="Pas de t-shirt" style="width:48%;border-radius:4px;opacity:0.5"/>
-<img src="tshirt-verso.png" alt="Pas de t-shirt" style="width:48%;border-radius:4px;opacity:0.5"/> alt="Pas de t-shirt" />
+              <div class="tshirt-img-wrap" style="display:flex;gap:4px;width:100%">
+                <img src="tshirt-recto.png" alt="Pas de t-shirt" style="width:48%;border-radius:4px;opacity:0.5"/>
+                <img src="tshirt-verso.png" alt="Pas de t-shirt" style="width:48%;border-radius:4px;opacity:0.5"/>
                 <div class="tshirt-croix"></div>
+                <button type="button" class="tshirt-zoom" onclick="ouvrirApercuTshirt(event)" title="Voir en grand">👁</button>
               </div>
               Je n'achète pas<br>de t-shirt
             </label>
@@ -384,6 +418,7 @@
               <option value="M">M</option>
               <option value="L">L</option>
               <option value="XL">XL</option>
+              <option value="XXL">XXL</option>
             </select>
             <span class="select-arrow">▼</span>
           </div>
@@ -397,7 +432,6 @@
             <label for="arrivee11">
               <span class="date-jour">11</span>
               <span class="date-mois">Septembre</span>
-              <span class="date-soirees">2 soirées</span>
             </label>
           </div>
           <div class="date-option">
@@ -405,7 +439,6 @@
             <label for="arrivee12">
               <span class="date-jour">12</span>
               <span class="date-mois">Septembre</span>
-              <span class="date-soirees">1 soirée</span>
             </label>
           </div>
         </div>
@@ -437,10 +470,6 @@
         <div class="recap-row">
           <span class="recap-key">Arrivée</span>
           <span class="recap-val" id="recap-arrivee"></span>
-        </div>
-        <div class="recap-row">
-          <span class="recap-key">Durée</span>
-          <span class="recap-val" id="recap-soirees"></span>
         </div>
         <div class="recap-row" id="recap-tshirt-row">
           <span class="recap-key">T-shirt</span>
@@ -480,6 +509,24 @@
   <!-- BOUTON MUSIQUE -->
   <button class="music-btn" id="music-btn" title="Couper/activer la musique">🔊</button>
 
+  <!-- APERÇU T-SHIRT -->
+  <div class="tshirt-modal-overlay" id="tshirt-modal" onclick="fermerApercuTshirt(event)">
+    <div class="tshirt-modal-box" onclick="event.stopPropagation()">
+      <button class="tshirt-modal-close" onclick="fermerApercuTshirt(event)" title="Fermer">✕</button>
+      <div class="tshirt-modal-title">Le t-shirt Les Braises</div>
+      <div class="tshirt-modal-images">
+        <div class="tshirt-modal-img-col">
+          <img src="tshirt-recto.png" alt="T-shirt recto" />
+          <span>Recto</span>
+        </div>
+        <div class="tshirt-modal-img-col">
+          <img src="tshirt-verso.png" alt="T-shirt verso" />
+          <span>Verso</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ── MUSIQUE ──
     const music = document.getElementById('bg-music');
@@ -518,11 +565,10 @@
     let stripe, elements, cardElement;
     let tarifData = null;
 
-    function getTarif(inv, arrivee) {
-      const uneNuit = arrivee === '12';
-      if (inv === 'Camille') return { prix: uneNuit ? 19 : 20, label: 'Tarif amis de Camille' };
-      if (inv === 'Jean' || inv === 'Théophile') return { prix: uneNuit ? 34 : 35, label: 'Tarif ' + inv };
-      if (inv) return { prix: uneNuit ? 44 : 45, label: 'Tarif général' };
+    function getTarif(inv) {
+      if (inv === 'Camille') return { prix: 25, label: 'Tarif amis de Camille' };
+      if (inv === 'Jean' || inv === 'Théophile') return { prix: 37, label: 'Tarif ' + inv };
+      if (inv) return { prix: 49, label: 'Tarif général' };
       return null;
     }
 
@@ -530,6 +576,20 @@
       const checked = document.querySelector('input[name="arrivee"]:checked');
       return checked ? checked.value : null;
     }
+
+    // ── APERÇU T-SHIRT ──
+    function ouvrirApercuTshirt(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('tshirt-modal').classList.add('visible');
+    }
+    function fermerApercuTshirt(e) {
+      if (e) e.stopPropagation();
+      document.getElementById('tshirt-modal').classList.remove('visible');
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') fermerApercuTshirt();
+    });
 
     function toggleTaille() {
       const tshirt = document.querySelector('input[name="tshirt"]:checked');
@@ -552,17 +612,16 @@
       const badge = document.getElementById('tarif-badge');
 
       if (inv) {
-        const t = getTarif(inv, arrivee);
+        const t = getTarif(inv);
         tarifData = t;
         const tshirt = document.querySelector('input[name="tshirt"]:checked');
         const tshirtVal = tshirt ? tshirt.value : null;
-        const total = t.prix + (tshirtVal === 'oui' ? 30 : 0);
+        const total = t.prix + (tshirtVal === 'oui' ? 15 : 0);
         tarifData = { ...t, total: total };
         document.getElementById('tarif-amount').textContent = total + ' €';
         document.getElementById('tarif-invitant').textContent = t.label;
-        const soireesLabel = arrivee === '12' ? '1 soirée' : arrivee === '11' ? '2 soirées' : '';
         const tshirtLabel = tshirtVal === 'oui' ? ' · t-shirt inclus' : '';
-        document.getElementById('tarif-sous').textContent = (soireesLabel ? 'tarif · 1 billet · ' + soireesLabel : 'tarif · 1 billet') + tshirtLabel;
+        document.getElementById('tarif-sous').textContent = 'tarif · 1 billet' + tshirtLabel;
         badge.classList.add('visible');
       } else {
         badge.classList.remove('visible');
@@ -583,27 +642,22 @@
       const email = document.getElementById('email').value.trim();
       const inv = document.getElementById('invitant').value;
       const arrivee = getArrivee();
-      const soirees = arrivee === '12' ? '1 soirée' : '2 soirées';
 
       document.getElementById('recap-nom').textContent = prenom + ' ' + nom;
       document.getElementById('recap-email').textContent = email;
       document.getElementById('recap-inv').textContent = inv;
       document.getElementById('recap-arrivee').textContent = arrivee + ' septembre 2026';
-      document.getElementById('recap-soirees').textContent = soirees;
       const tshirtEl3 = document.querySelector('input[name="tshirt"]:checked');
       const tshirtVal3 = tshirtEl3 ? tshirtEl3.value : 'non';
       const taille3 = document.getElementById('taille-tshirt').value;
       if (tshirtVal3 === 'oui') {
-        document.getElementById('recap-tshirt').textContent = 'Oui — taille ' + taille3 + ' (+30 €)';
+        document.getElementById('recap-tshirt').textContent = 'Oui — taille ' + taille3 + ' (+15 €)';
         document.getElementById('recap-tshirt-row').style.display = 'flex';
       } else {
         document.getElementById('recap-tshirt-row').style.display = 'none';
       }
-      const tshirtEl = document.querySelector('input[name="tshirt"]:checked');
-      const tshirtVal2 = tshirtEl ? tshirtEl.value : 'non';
-      const taille2 = document.getElementById('taille-tshirt').value;
-      const tarifFinal = getTarif(inv, arrivee);
-      const tshirtAdd = (document.querySelector('input[name="tshirt"]:checked') || {}).value === 'oui' ? 30 : 0;
+      const tarifFinal = getTarif(inv);
+      const tshirtAdd = (document.querySelector('input[name="tshirt"]:checked') || {}).value === 'oui' ? 15 : 0;
       const totalFinal = tarifFinal.prix + tshirtAdd;
       tarifData = { ...tarifFinal, total: totalFinal };
       document.getElementById('recap-total').textContent = totalFinal + ' €';
@@ -648,7 +702,6 @@
       const email = document.getElementById('email').value.trim();
       const inv = document.getElementById('invitant').value;
       const arrivee = getArrivee();
-      const soirees = arrivee === '12' ? '1 soirée' : '2 soirées';
       const tshirtPay = document.querySelector('input[name="tshirt"]:checked');
       const tshirtValPay = tshirtPay ? tshirtPay.value : 'non';
       const taillePay = document.getElementById('taille-tshirt').value;
@@ -662,7 +715,6 @@
             nom: prenom + ' ' + nom,
             email: email,
             arrivee: arrivee,
-            soirees: soirees,
             tshirt: tshirtValPay,
             taille_tshirt: tshirtValPay === 'oui' ? taillePay : 'aucune'
           })
@@ -688,8 +740,7 @@
             prenom: prenom,
             email: email,
             invitant: inv,
-            arrivee: arrivee,
-            soirees: soirees
+            arrivee: arrivee
           })
         });
 
@@ -698,7 +749,7 @@
         document.getElementById('success-text').innerHTML =
           `Merci <strong>${prenom}</strong> !<br><br>
            Ton billet pour <strong>Les Braises 2026</strong><br>
-           Arrivée le <strong>${arrivee} septembre</strong> · <strong>${soirees}</strong><br>
+           Arrivée le <strong>${arrivee} septembre</strong><br>
            Les Aubrais, Machecoul<br><br>
            est confirmé. Un email de confirmation<br>
            t'a été envoyé à <strong>${email}</strong>.`;
