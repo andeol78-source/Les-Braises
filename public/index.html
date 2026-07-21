@@ -373,6 +373,7 @@
             <option value="Camille">Camille</option>
             <option value="Jean">Jean</option>
             <option value="Théophile">Théophile</option>
+            <option value="Mayeul">Mayeul</option>
             <option value="Isaure">Isaure</option>
             <option value="Andéol">Andéol</option>
             <option value="Ombeline">Ombeline</option>
@@ -567,7 +568,7 @@
 
     function getTarif(inv) {
       if (inv === 'Camille') return { prix: 25, label: 'Tarif amis de Camille' };
-      if (inv === 'Jean' || inv === 'Théophile') return { prix: 37, label: 'Tarif ' + inv };
+      if (inv === 'Jean' || inv === 'Théophile' || inv === 'Mayeul') return { prix: 37, label: 'Tarif ' + inv };
       if (inv) return { prix: 49, label: 'Tarif général' };
       return null;
     }

@@ -34,7 +34,7 @@ function sauvegarderAcheteur(acheteur) {
 function getTarifCentimes(invitant, tshirt) {
   let base = 4900;
   if (invitant === 'Camille') base = 2500;
-  else if (invitant === 'Jean' || invitant === 'Théophile') base = 3700;
+  else if (invitant === 'Jean' || invitant === 'Théophile' || invitant === 'Mayeul') base = 3700;
   if (tshirt === 'oui') base += 1500;
   return base;
 }
