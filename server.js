@@ -7,8 +7,10 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Fichier où sont stockés les acheteurs
-const DATA_FILE = path.join(__dirname, 'acheteurs.json');
+// Fichier où sont stockés les acheteurs (sur un volume persistant en production, sinon en local)
+const DATA_FILE = process.env.DATA_DIR
+  ? path.join(process.env.DATA_DIR, 'acheteurs.json')
+  : path.join(__dirname, 'acheteurs.json');
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 // Initialise le fichier si il n'existe pas
